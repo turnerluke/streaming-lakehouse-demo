@@ -73,6 +73,26 @@ conn = duckdb.connect("target/local.duckdb", read_only=True)
 conn.sql("select * from gold.dim_repo_scd2 limit 5").show()
 ```
 
+## Live pipeline in Dagster (local)
+
+The full streaming + medallion graph runs in one Dagster deployment
+against Colima's Redpanda + DuckDB — no cloud, no BQ. From the repo
+root:
+
+```bash
+docker compose up -d redpanda        # or `colima start` if not already up
+uv sync
+cd dbt && cp profiles.yml.example profiles.yml && uv run dbt deps && cd ..
+uv run dagster dev -w dagster_project/workspace.yaml
+```
+
+Open <http://localhost:3000>. The asset graph shows five nodes
+end-to-end: `github_events_published` -> `bronze.raw_events` ->
+`silver.stg_github_events` -> `{gold.dim_repo_scd2,
+gold.fct_events_hourly}`. Hit "Materialize all" to publish one poll of
+real GitHub events into Kafka, drain them into DuckDB, and rebuild the
+medallion.
+
 ## Quickstart (streaming, local)
 
 ```bash
