@@ -135,9 +135,14 @@ jobs:
         uses: tj-actions/changed-files@v47
         with:
           files: "**.md"
+          # `.markdownlint.yml`'s `ignore:` list applies to auto-discovered
+          # files only. Because we pass explicit filenames from
+          # `tj-actions/changed-files` to markdownlint-cli2, the exemption
+          # has to be enforced here too. Keep the two lists in sync.
           files_ignore: |
             CHANGELOG.md
             evidence/**
+            prompt-*.md
 
       - name: Set up Node.js
         if: steps.changed-files.outputs.any_changed == 'true'
