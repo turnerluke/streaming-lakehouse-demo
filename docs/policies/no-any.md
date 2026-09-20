@@ -28,6 +28,7 @@ they advertise no more shape information than `Any` and force callers to
 
     Unlike `Any` these are true unions, so narrowing with `isinstance`
     works as expected.
+
 - **Decorator that genuinely loses the inner type** (e.g. `tenacity.retry`
   widens its return to `Any`): rebind through a typed local at the
   boundary so the precise type propagates out. Do **not** use
@@ -38,7 +39,7 @@ they advertise no more shape information than `Any` and force callers to
 - **Ruff `ANN401`** rejects `Any` in function annotations. Enabled
   repo-wide via `select = ["ALL"]` in `ruff.toml`.
 - **Ruff `flake8-tidy-imports.banned-api`** rejects `from typing import
-  Any` and `typing.Any` references at the import site. Configured in
+Any` and `typing.Any` references at the import site. Configured in
   `ruff.toml` under `[lint.flake8-tidy-imports.banned-api]`.
 - These rules apply equally to `tests/` — the per-file-ignores in
   `ruff.toml` deliberately do **not** include `ANN401` or `TID251`.

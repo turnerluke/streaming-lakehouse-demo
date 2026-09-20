@@ -69,39 +69,39 @@ git checkout -b chore/repo-standards-alignment
 
 ## Files
 
-| | Path |
-|---|---|
-| ADD | `AGENTS.md` |
-| ADD | `CLAUDE.md` |
-| ADD | `REVIEW.md` |
-| ADD | `LICENSE` |
-| ADD | `ruff.toml` |
-| ADD | `.commitlintrc.cjs` |
-| ADD | `.gitlint.yaml` |
-| ADD | `.markdownlint.yml` |
-| ADD | `.markdownlintignore` |
-| ADD | `.yamllint.yml` |
-| ADD | `.prettierrc.cjs` |
-| ADD | `.prettierignore` |
-| ADD | `.hadolint.yaml` |
-| ADD | `.python-version` |
-| ADD | `package.json` |
-| ADD | `docs/policies/no-any.md` |
-| ADD | `.github/CODEOWNERS` |
-| ADD | `.github/dependabot.yml` |
-| ADD | `.github/workflows/lint.yml` |
-| ADD | `.github/workflows/test.yml` |
-| ADD | `.claude/settings.json` |
-| ADD | `.claude/agents/adversarial-reviewer.md` |
-| ADD | `.claude/agents/implementer.md` |
-| ADD | `scripts/local-ci/run-subproject-tests.sh` |
-| ADD | `tests/__init__.py` |
-| ADD | `tests/test_repo_standards.py` |
-| EDIT | `pyproject.toml` (py3.13, dep-groups, MIT, pytest config) |
-| EDIT | `.pre-commit-config.yaml` (full cms-style hook list) |
-| EDIT | `.gitignore` (broaden coverage) |
-| EDIT | `README.md` (link `AGENTS.md`, drop the "scaffold" caveat once green) |
-| DELETE | `.github/workflows/ci.yml` (superseded by `lint.yml` + `test.yml`) |
+|        | Path                                                                     |
+| ------ | ------------------------------------------------------------------------ |
+| ADD    | `AGENTS.md`                                                              |
+| ADD    | `CLAUDE.md`                                                              |
+| ADD    | `REVIEW.md`                                                              |
+| ADD    | `LICENSE`                                                                |
+| ADD    | `ruff.toml`                                                              |
+| ADD    | `.commitlintrc.cjs`                                                      |
+| ADD    | `.gitlint.yaml`                                                          |
+| ADD    | `.markdownlint.yml`                                                      |
+| ADD    | `.markdownlintignore`                                                    |
+| ADD    | `.yamllint.yml`                                                          |
+| ADD    | `.prettierrc.cjs`                                                        |
+| ADD    | `.prettierignore`                                                        |
+| ADD    | `.hadolint.yaml`                                                         |
+| ADD    | `.python-version`                                                        |
+| ADD    | `package.json`                                                           |
+| ADD    | `docs/policies/no-any.md`                                                |
+| ADD    | `.github/CODEOWNERS`                                                     |
+| ADD    | `.github/dependabot.yml`                                                 |
+| ADD    | `.github/workflows/lint.yml`                                             |
+| ADD    | `.github/workflows/test.yml`                                             |
+| ADD    | `.claude/settings.json`                                                  |
+| ADD    | `.claude/agents/adversarial-reviewer.md`                                 |
+| ADD    | `.claude/agents/implementer.md`                                          |
+| ADD    | `scripts/local-ci/run-subproject-tests.sh`                               |
+| ADD    | `tests/__init__.py`                                                      |
+| ADD    | `tests/test_repo_standards.py`                                           |
+| EDIT   | `pyproject.toml` (py3.13, dep-groups, MIT, pytest config)                |
+| EDIT   | `.pre-commit-config.yaml` (full cms-style hook list)                     |
+| EDIT   | `.gitignore` (broaden coverage)                                          |
+| EDIT   | `README.md` (link `AGENTS.md`, drop the "scaffold" caveat once green)    |
+| DELETE | `.github/workflows/ci.yml` (superseded by `lint.yml` + `test.yml`)       |
 | DELETE | `.sqlfluff` (moved into `dbt/` scope; sqlfluff-templater-dbt takes over) |
 
 ## Verification
@@ -140,7 +140,7 @@ uv run pytest tests/
 
 - `commitlint` will reject **this** sprint's own PR title unless it's
   lowercase after the type. Use `chore: align repo standards with
-  cms-open-data`, not `Chore: …`.
+cms-open-data`, not `Chore: …`.
 - `interrogate` (docstring coverage) will fail loudly on the current
   `producer/` and `consumer/` modules if their module docstrings are
   missing. They already have them; keep them.
