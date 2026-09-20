@@ -1,0 +1,4 @@
+# Evidence pages are markdown with embedded SQL blocks and Svelte-style
+# components that prettier mangles; the Evidence project manages its own
+# formatting.
+evidence/

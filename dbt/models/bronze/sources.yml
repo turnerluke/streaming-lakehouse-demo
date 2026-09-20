@@ -1,0 +1,21 @@
+version: 2
+
+sources:
+  - name: bronze
+    database: "{{ env_var('GCP_PROJECT_ID') }}"
+    schema: bronze
+    description: "Raw landed GitHub events from the streaming consumer."
+    tables:
+      - name: raw_events
+        description: "One row per public GitHub event. Payload preserved as JSON."
+        loaded_at_field: ingested_at
+        freshness:
+          warn_after: { count: 15, period: minute }
+          error_after: { count: 60, period: minute }
+        columns:
+          - name: event_id
+            tests: [not_null, unique]
+          - name: event_type
+            tests: [not_null]
+          - name: ingested_at
+            tests: [not_null]

@@ -1,0 +1,11 @@
+[sqlfluff]
+dialect = bigquery
+templater = jinja
+exclude_rules = L034, L036
+
+[sqlfluff:indentation]
+indented_joins = false
+indented_ctes = false
+
+[sqlfluff:templater:jinja]
+apply_dbt_builtins = true

@@ -1,0 +1,104 @@
+# See https://pre-commit.com for more information
+# See https://pre-commit.com/hooks.html for more hooks
+---
+# Auto-install both file-staging hooks (pre-commit) and commit-msg hooks so a
+# single `pre-commit install` wires up everything, including commitlint below.
+default_install_hook_types: [pre-commit, commit-msg]
+
+repos:
+  # ============================================================================================================================
+  # General file checks
+  # ============================================================================================================================
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v6.0.0
+    hooks:
+      - id: check-ast
+      - id: check-docstring-first
+      - id: check-toml
+      - id: check-yaml
+        args: [--allow-multiple-documents]
+      - id: check-json
+      - id: debug-statements
+      - id: detect-aws-credentials
+        args: [--allow-missing-credentials]
+      - id: detect-private-key
+      - id: end-of-file-fixer
+      - id: trailing-whitespace
+
+  # ============================================================================================================================
+  # Commit message linting
+  # ============================================================================================================================
+  # gitlint covers title regex, body length, banned words, WIP escape hatch.
+  - repo: https://github.com/jorisroovers/gitlint
+    rev: v0.19.1
+    hooks:
+      - id: gitlint
+
+  # commitlint runs the SAME config CI uses (.commitlintrc.cjs), so the
+  # custom subject-case-allow-backticks rule is enforced locally too.
+  - repo: https://github.com/alessandrojcm/commitlint-pre-commit-hook
+    rev: v9.22.0
+    hooks:
+      - id: commitlint
+        stages: [commit-msg]
+        additional_dependencies:
+          - "@commitlint/cli@19.6.1"
+          - "@commitlint/config-conventional@19.6.0"
+
+  # ============================================================================================================================
+  # Language-specific linting and formatting
+  # ============================================================================================================================
+
+  # YAML
+  - repo: https://github.com/adrienverge/yamllint
+    rev: v1.37.1
+    hooks:
+      - id: yamllint
+        args: [-c=.yamllint.yml]
+
+  # Markdown
+  - repo: https://github.com/igorshubovych/markdownlint-cli
+    rev: v0.45.0
+    hooks:
+      - id: markdownlint
+        args: [--config, .markdownlint.yml]
+
+  # Prettier (JS, TS, JSON, YAML, Markdown, CSS, HTML, TOML)
+  - repo: https://github.com/JoC0de/pre-commit-prettier
+    rev: v3.4.2
+    hooks:
+      - id: prettier
+        types_or: [javascript, jsx, ts, tsx, json, yaml, markdown, css, scss, html, toml]
+        args: [--write, --ignore-unknown]
+        additional_dependencies:
+          - prettier@3.4.2
+          - prettier-plugin-toml@2.0.1
+
+  # Python docstring coverage
+  - repo: https://github.com/econchick/interrogate
+    rev: "1.7.0"
+    hooks:
+      - id: interrogate
+        args: [-v]
+        exclude: tests/
+
+  # Python linting
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.16.2
+    hooks:
+      - id: ruff
+
+  # ============================================================================================================================
+  # SQL (dbt models)
+  # ============================================================================================================================
+  # Lints via a plain jinja templater to avoid requiring `dbt deps` to have
+  # run first. When the dbt project grows a `dbt_packages/` directory,
+  # switch this hook to `templater = dbt` (see cms-open-data for the
+  # subshell pattern that scopes the invocation).
+  - repo: local
+    hooks:
+      - id: sqlfluff-lint
+        name: sqlfluff lint (dbt models)
+        language: system
+        entry: bash -c 'cd dbt && uv run sqlfluff lint "${@#dbt/}"' --
+        files: ^dbt/models/.*\.sql$

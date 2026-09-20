@@ -1,0 +1,27 @@
+version: 2
+
+models:
+  - name: dim_repo_scd2
+    description: "SCD Type 2 for GitHub repos. One row per (repo, attribute-change window)."
+    columns:
+      - name: repo_version_key
+        tests: [not_null, unique]
+      - name: repo_name
+        tests: [not_null]
+      - name: valid_from
+        tests: [not_null]
+      - name: is_current
+        tests: [not_null]
+
+  - name: fct_events_hourly
+    description: "Event counts aggregated per (hour, event_type)."
+    columns:
+      - name: event_hour
+        tests: [not_null]
+      - name: event_type
+        tests: [not_null]
+      - name: event_count
+        tests:
+          - not_null
+          - dbt_utils.expression_is_true:
+              expression: ">= 0"

@@ -1,0 +1,6 @@
+# See https://docs.github.com/en/repositories/managing-your-repositories-settings-and-features/customizing-your-repository/about-code-owners
+# Each line is a file pattern followed by one or more owners.
+# Owners are auto-requested for review on PRs that touch matching paths.
+
+# Default owner for everything in the repo
+* @turnerluke

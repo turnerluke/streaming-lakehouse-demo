@@ -1,0 +1,5 @@
+ignored:
+  # DL3008 - apt version pinning causes broken builds when pinned versions
+  # are removed from repos. Base image tag provides reproducibility.
+  # See https://github.com/hadolint/hadolint/issues/884
+  - DL3008

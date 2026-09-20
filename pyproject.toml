@@ -1,0 +1,62 @@
+[project]
+name = "streaming-lakehouse-demo"
+version = "0.1.0"
+description = "Real-time GitHub Events lakehouse: Kafka -> BigQuery -> dbt -> Evidence, orchestrated by Dagster."
+readme = "README.md"
+license = "MIT"
+license-files = ["LICENSE"]
+authors = [{ name = "Turner Luke", email = "turnermluke@gmail.com" }]
+requires-python = ">=3.13"
+dependencies = [
+    "confluent-kafka>=2.5",
+    "dagster>=1.8",
+    "dagster-dbt>=0.24",
+    "dagster-webserver>=1.8",
+    "dbt-bigquery>=1.8",
+    "google-cloud-bigquery>=3.25",
+    "google-cloud-bigquery-storage>=2.25",
+    "openlineage-python>=1.20",
+    "pydantic>=2.8",
+    "python-dotenv>=1.0",
+    "requests>=2.32",
+]
+
+[project.urls]
+Repository = "https://github.com/turnerluke/streaming-lakehouse-demo"
+Issues = "https://github.com/turnerluke/streaming-lakehouse-demo/issues"
+
+[dependency-groups]
+dev = [
+    "interrogate>=1.7.0",
+    "pre-commit>=4.6.0",
+    "pytest>=9.1.1",
+    "pytest-cov>=6.0.0",
+    "ruff>=0.16.2",
+    "sqlfluff>=3.1",
+    "sqlfluff-templater-dbt>=3.1",
+]
+
+# Workspace members will be added here as the repo grows.
+[tool.uv.workspace]
+members = []
+
+[tool.pytest.ini_options]
+minversion = "8.3"
+testpaths = ["tests"]
+addopts = ["--strict-markers", "--tb=short", "-v"]
+
+[tool.coverage.run]
+branch = true
+source = ["producer", "consumer", "dagster_project"]
+
+[tool.coverage.report]
+show_missing = true
+skip_covered = false
+
+[tool.interrogate]
+fail-under = 80
+ignore-init-module = true
+ignore-nested-functions = true
+ignore-private = true
+ignore-magic = true
+exclude = ["tests", "build", ".venv"]

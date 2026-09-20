@@ -1,0 +1,45 @@
+# ==============================================================================================================================
+# Gitlint Configuration
+# ==============================================================================================================================
+# Enforces conventional commit message format and quality standards.
+# Allows WIP commits for work-in-progress development.
+#
+# CONVENTIONAL COMMIT FORMAT:
+# <type>[optional scope]: <description>
+#
+# [optional body]
+#
+# [optional footer(s)]
+# ==============================================================================================================================
+---
+general:
+  # B6 = body-is-missing: allow commits without body text (useful for simple changes)
+  ignore: "B6"
+
+  verbosity: 2
+
+  ignore-merge-commits: true
+  ignore-fixup-commits: true
+  ignore-squash-commits: true
+  ignore-revert-commits: true
+
+ignore-by-title:
+  # Ignore commits that match WIP patterns (case-insensitive)
+  regex: "^(WIP|wip).*|.*\\[(WIP|wip)\\].*|.*\\((WIP|wip)\\).*"
+
+title-max-length:
+  line-length: 72
+
+title-must-not-contain-word:
+  words: "TODO,fixme,hack,temp,temporary,tmp"
+
+title-match-regex:
+  regex: >-
+    ^(feat|fix|docs|style|refactor|perf|test|build|ci|chore|revert)
+    (\(.+\))?!?: .{1,50}$
+
+body-max-line-length:
+  line-length: 72
+
+body-min-length:
+  min-length: 10

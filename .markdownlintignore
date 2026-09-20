@@ -1,0 +1,5 @@
+# Keep generated changelogs
+**/CHANGELOG.md
+# Evidence pages are markdown with embedded SQL blocks and Svelte-style
+# components that markdownlint's rules don't apply to
+evidence/

@@ -1,0 +1,23 @@
+# ==============================================================================================================================
+# markdownlint configuration
+# ==============================================================================================================================
+---
+ignore:
+  - "CHANGELOG.md"
+  - "**/CHANGELOG.md"
+
+# Repo default line length of 128
+MD013:
+  line_length: 128
+
+# Indentation level of unordered list
+MD007:
+  indent: 4
+
+# Allow duplicated heading under different parents
+MD024:
+  siblings_only: true
+
+# Link text should be descriptive
+# Disallows link text like *here* which is annoying
+MD059: false

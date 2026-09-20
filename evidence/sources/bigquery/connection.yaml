@@ -1,0 +1,6 @@
+name: bigquery
+type: bigquery
+options:
+  project_id: ${GCP_PROJECT_ID}
+  key_file: ${GOOGLE_APPLICATION_CREDENTIALS}
+  location: US

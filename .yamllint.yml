@@ -1,0 +1,28 @@
+# ==============================================================================================================================
+# yamllint configuration
+# ==============================================================================================================================
+---
+extends: default
+
+# Evidence config files follow Evidence's own conventions (no document
+# start marker, regenerated connection YAML), so they're not linted here
+ignore: |
+  evidence/
+
+rules:
+  line-length:
+    max: 128
+
+  truthy:
+    # Disable truthy warning for "on:" key in GitHub Actions
+    check-keys: false
+
+  # Prettier formats inline flow mappings with a space inside the braces
+  # (e.g. `{ count: 15, period: minute }`). Let yamllint accept that so the
+  # two formatters don't argue.
+  braces:
+    max-spaces-inside: 1
+
+  # Prettier doesn't emit `---` for YAML files it manages; forcing a start
+  # marker would create a formatter conflict on every commit.
+  document-start: disable

@@ -1,0 +1,60 @@
+# ==============================================================================================================================
+# Dependabot configuration
+# ==============================================================================================================================
+# Keeps dependencies and GitHub Actions up to date. Each PR Dependabot opens uses our usual conventional-commit format
+# via the `commit-message` block. See GitHub's docs for the full schema.
+# ==============================================================================================================================
+---
+version: 2
+updates:
+  # Python deps managed by uv (PEP 621 + uv.lock)
+  - package-ecosystem: "uv"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    commit-message:
+      prefix: "chore"
+      include: "scope"
+    open-pull-requests-limit: 5
+    labels:
+      - "dependencies"
+      - "python"
+
+  # Node deps for prettier + plugins (used by pre-commit + CI)
+  - package-ecosystem: "npm"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    commit-message:
+      prefix: "chore"
+      include: "scope"
+    open-pull-requests-limit: 3
+    labels:
+      - "dependencies"
+      - "javascript"
+
+  # GitHub Actions (workflow steps)
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    commit-message:
+      prefix: "ci"
+      include: "scope"
+    open-pull-requests-limit: 5
+    labels:
+      - "dependencies"
+      - "ci"
+
+  # Terraform providers
+  - package-ecosystem: "terraform"
+    directory: "/terraform"
+    schedule:
+      interval: "weekly"
+    commit-message:
+      prefix: "chore"
+      include: "scope"
+    open-pull-requests-limit: 3
+    labels:
+      - "dependencies"
+      - "terraform"

@@ -1,0 +1,15 @@
+{
+  "name": "streaming-lakehouse-demo",
+  "version": "0.1.0",
+  "description": "Real-time GitHub Events lakehouse: Kafka -> BigQuery -> dbt -> Evidence, orchestrated by Dagster.",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/turnerluke/streaming-lakehouse-demo.git"
+  },
+  "private": true,
+  "type": "commonjs",
+  "devDependencies": {
+    "prettier": "^3.4.2",
+    "prettier-plugin-toml": "^2.0.1"
+  }
+}

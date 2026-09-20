@@ -1,0 +1,444 @@
+# ==============================================================================================================================
+# Lint
+# ==============================================================================================================================
+# Per-linter parallel jobs on PR. Each linter reports its own red/green status.
+# On failure the linter uploads its captured output as an artifact so the
+# reviewer can download it — the consolidated PR-comment report from
+# cms-open-data is intentionally not ported yet (see prompt-01).
+#
+# Uses smart file detection to only run relevant linters based on the types of
+# files changed.
+# ==============================================================================================================================
+---
+name: Code Quality Check
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions: {}
+
+jobs:
+  # ============================================================================================================================
+  # Validate PR Title
+  # ============================================================================================================================
+  validate_pr_title:
+    name: Validate PR Title
+    runs-on: ubuntu-latest
+    permissions:
+      pull-requests: read
+    steps:
+      - name: Validate PR title follows conventional commits
+        uses: amannn/action-semantic-pull-request@v6
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          types: |
+            feat
+            fix
+            docs
+            style
+            refactor
+            perf
+            test
+            chore
+            ci
+            build
+          requireScope: false
+          subjectPattern: ^(?![A-Z]).+$
+          subjectPatternError: |
+            The subject "{subject}" found in the pull request title "{title}"
+            didn't match the configured pattern. Please ensure that the subject
+            doesn't start with an uppercase character.
+
+  # ============================================================================================================================
+  # Ruff (Python)
+  # ============================================================================================================================
+  ruff:
+    name: Ruff (Python)
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
+      - name: Get changed Python files
+        id: changed-files
+        uses: tj-actions/changed-files@v47
+        with:
+          files: "**.py"
+
+      - name: Install uv
+        if: steps.changed-files.outputs.any_changed == 'true'
+        uses: astral-sh/setup-uv@v3
+        with:
+          enable-cache: true
+
+      - name: Set up Python
+        if: steps.changed-files.outputs.any_changed == 'true'
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Install dependencies
+        if: steps.changed-files.outputs.any_changed == 'true'
+        run: uv sync --group dev
+
+      - name: Run ruff
+        id: ruff
+        if: steps.changed-files.outputs.any_changed == 'true'
+        run: |
+          if uv run ruff check \
+              ${{ steps.changed-files.outputs.all_changed_files }} \
+              > ruff_output.txt 2>&1; then
+            echo "ruff_status=success" >> "$GITHUB_OUTPUT"
+          else
+            echo "ruff_status=failure" >> "$GITHUB_OUTPUT"
+            cat ruff_output.txt
+          fi
+        continue-on-error: true
+
+      - name: Upload ruff output
+        if: steps.ruff.outputs.ruff_status == 'failure'
+        uses: actions/upload-artifact@v4
+        with:
+          name: lint-output-ruff
+          path: ruff_output.txt
+
+      - name: Fail if ruff failed
+        if: steps.ruff.outputs.ruff_status == 'failure'
+        run: exit 1
+
+  # ============================================================================================================================
+  # Markdownlint
+  # ============================================================================================================================
+  markdownlint:
+    name: Markdownlint
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
+      - name: Get changed Markdown files
+        id: changed-files
+        uses: tj-actions/changed-files@v47
+        with:
+          files: "**.md"
+          files_ignore: |
+            CHANGELOG.md
+            evidence/**
+
+      - name: Set up Node.js
+        if: steps.changed-files.outputs.any_changed == 'true'
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Install markdownlint-cli2
+        if: steps.changed-files.outputs.any_changed == 'true'
+        run: npm install --save-dev markdownlint-cli2
+
+      - name: Run markdownlint
+        id: markdownlint
+        if: steps.changed-files.outputs.any_changed == 'true'
+        run: |
+          if npx markdownlint-cli2 \
+              --config .markdownlint.yml \
+              ${{ steps.changed-files.outputs.all_changed_files }} \
+              > markdownlint_output.txt 2>&1; then
+            echo "markdownlint_status=success" >> "$GITHUB_OUTPUT"
+          else
+            echo "markdownlint_status=failure" >> "$GITHUB_OUTPUT"
+            cat markdownlint_output.txt
+          fi
+        continue-on-error: true
+
+      - name: Upload markdownlint output
+        if: steps.markdownlint.outputs.markdownlint_status == 'failure'
+        uses: actions/upload-artifact@v4
+        with:
+          name: lint-output-markdownlint
+          path: markdownlint_output.txt
+
+      - name: Fail if markdownlint failed
+        if: steps.markdownlint.outputs.markdownlint_status == 'failure'
+        run: exit 1
+
+  # ============================================================================================================================
+  # Yamllint
+  # ============================================================================================================================
+  yamllint:
+    name: Yamllint
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
+      - name: Get changed YAML files
+        id: changed-files
+        uses: tj-actions/changed-files@v47
+        with:
+          files: |
+            **.yml
+            **.yaml
+
+      - name: Install uv
+        if: steps.changed-files.outputs.any_changed == 'true'
+        uses: astral-sh/setup-uv@v3
+        with:
+          enable-cache: true
+
+      - name: Install yamllint
+        if: steps.changed-files.outputs.any_changed == 'true'
+        run: uv tool install yamllint
+
+      - name: Run yamllint
+        id: yamllint
+        if: steps.changed-files.outputs.any_changed == 'true'
+        run: |
+          if uv tool run yamllint -f parsable -c .yamllint.yml \
+              ${{ steps.changed-files.outputs.all_changed_files }} \
+              > yamllint_output.txt 2>&1; then
+            echo "yamllint_status=success" >> "$GITHUB_OUTPUT"
+          else
+            echo "yamllint_status=failure" >> "$GITHUB_OUTPUT"
+            cat yamllint_output.txt
+          fi
+        continue-on-error: true
+
+      - name: Upload yamllint output
+        if: steps.yamllint.outputs.yamllint_status == 'failure'
+        uses: actions/upload-artifact@v4
+        with:
+          name: lint-output-yamllint
+          path: yamllint_output.txt
+
+      - name: Fail if yamllint failed
+        if: steps.yamllint.outputs.yamllint_status == 'failure'
+        run: exit 1
+
+  # ============================================================================================================================
+  # Prettier
+  # ============================================================================================================================
+  prettier:
+    name: Prettier
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
+      - name: Get changed files
+        id: changed-files
+        uses: tj-actions/changed-files@v47
+        with:
+          files: |
+            **.json
+            **.toml
+
+      - name: Set up Node.js
+        if: steps.changed-files.outputs.any_changed == 'true'
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Install prettier
+        if: steps.changed-files.outputs.any_changed == 'true'
+        run: npm install --save-dev prettier prettier-plugin-toml
+
+      - name: Run prettier
+        id: prettier
+        if: steps.changed-files.outputs.any_changed == 'true'
+        run: |
+          if npx prettier --check \
+              ${{ steps.changed-files.outputs.all_changed_files }} \
+              > prettier_output_raw.txt 2>&1; then
+            echo "prettier_status=success" >> "$GITHUB_OUTPUT"
+          else
+            echo "prettier_status=failure" >> "$GITHUB_OUTPUT"
+          fi
+          sed 's/\x1b\[[0-9;]*m//g' prettier_output_raw.txt > prettier_output.txt
+          cat prettier_output.txt
+        continue-on-error: true
+
+      - name: Upload prettier output
+        if: steps.prettier.outputs.prettier_status == 'failure'
+        uses: actions/upload-artifact@v4
+        with:
+          name: lint-output-prettier
+          path: prettier_output.txt
+
+      - name: Fail if prettier failed
+        if: steps.prettier.outputs.prettier_status == 'failure'
+        run: exit 1
+
+  # ============================================================================================================================
+  # Shellcheck
+  # ============================================================================================================================
+  shellcheck:
+    name: Shellcheck
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
+      - name: Get changed shell files
+        id: changed-files
+        uses: tj-actions/changed-files@v47
+        with:
+          files: |
+            **.sh
+            **.bash
+
+      - name: Install shellcheck
+        if: steps.changed-files.outputs.any_changed == 'true'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y shellcheck
+
+      - name: Run shellcheck
+        id: shellcheck
+        if: steps.changed-files.outputs.any_changed == 'true'
+        run: |
+          if shellcheck -x \
+              ${{ steps.changed-files.outputs.all_changed_files }} \
+              > shellcheck_output.txt 2>&1; then
+            echo "shellcheck_status=success" >> "$GITHUB_OUTPUT"
+          else
+            echo "shellcheck_status=failure" >> "$GITHUB_OUTPUT"
+            cat shellcheck_output.txt
+          fi
+        continue-on-error: true
+
+      - name: Upload shellcheck output
+        if: steps.shellcheck.outputs.shellcheck_status == 'failure'
+        uses: actions/upload-artifact@v4
+        with:
+          name: lint-output-shellcheck
+          path: shellcheck_output.txt
+
+      - name: Fail if shellcheck failed
+        if: steps.shellcheck.outputs.shellcheck_status == 'failure'
+        run: exit 1
+
+  # ============================================================================================================================
+  # GitLeaks (Secrets Detection)
+  # ============================================================================================================================
+  gitleaks:
+    name: GitLeaks (Secrets)
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
+      - name: Install gitleaks
+        run: |
+          version="8.18.2"
+          base_url="https://github.com/gitleaks/gitleaks/releases/download"
+          curl -L -o gitleaks.tar.gz \
+            "${base_url}/v${version}/gitleaks_${version}_linux_x64.tar.gz"
+          tar -xzf gitleaks.tar.gz
+          sudo mv gitleaks /usr/local/bin/
+          gitleaks version
+
+      - name: Run gitleaks
+        id: gitleaks
+        run: |
+          if gitleaks detect --verbose \
+              --log-opts="origin/${{ github.base_ref }}..HEAD" \
+              --report-path=gitleaks-report.json \
+              > gitleaks_output.txt 2>&1; then
+            echo "gitleaks_status=success" >> "$GITHUB_OUTPUT"
+          else
+            echo "gitleaks_status=failure" >> "$GITHUB_OUTPUT"
+            cat gitleaks_output.txt
+          fi
+        continue-on-error: true
+
+      - name: Upload gitleaks output
+        if: steps.gitleaks.outputs.gitleaks_status == 'failure'
+        uses: actions/upload-artifact@v4
+        with:
+          name: lint-output-gitleaks
+          path: gitleaks_output.txt
+
+      - name: Fail if gitleaks failed
+        if: steps.gitleaks.outputs.gitleaks_status == 'failure'
+        run: exit 1
+
+  # ============================================================================================================================
+  # Commitlint
+  # ============================================================================================================================
+  commitlint:
+    name: Commitlint
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Install commitlint
+        run: |
+          npm install --save-dev \
+            @commitlint/cli@19.6.1 \
+            @commitlint/config-conventional@19.6.0
+
+      - name: Validate commits in PR
+        id: commitlint
+        run: |
+          if npx commitlint \
+              --from origin/${{ github.base_ref }} \
+              --to HEAD \
+              --verbose \
+              > commitlint_output.txt 2>&1; then
+            echo "commitlint_status=success" >> "$GITHUB_OUTPUT"
+          else
+            echo "commitlint_status=failure" >> "$GITHUB_OUTPUT"
+            cat commitlint_output.txt
+          fi
+        continue-on-error: true
+
+      - name: Upload commitlint output
+        if: steps.commitlint.outputs.commitlint_status == 'failure'
+        uses: actions/upload-artifact@v4
+        with:
+          name: lint-output-commitlint
+          path: commitlint_output.txt
+
+      - name: Fail if commitlint failed
+        if: steps.commitlint.outputs.commitlint_status == 'failure'
+        run: exit 1
