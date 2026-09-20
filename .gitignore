@@ -54,6 +54,15 @@ evidence/.evidence/
 evidence/node_modules/
 evidence/build/
 
+# ---------- sprint prompts ----------
+# `prompt-<slug>.md` at repo root is the scoping / reviewer-brief
+# artifact per AGENTS.md's Sprints section. It's authored locally,
+# never committed. The PR body + commit message are the durable
+# historical record.
+# Anchored to the root so a stray `docs/prompt-*.md` (unlikely but
+# defensible) wouldn't be silently ignored.
+/prompt-*.md
+
 # ---------- editor / os ----------
 .DS_Store
 .vscode/

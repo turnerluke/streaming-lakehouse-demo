@@ -2,10 +2,3 @@
 # components that prettier mangles; the Evidence project manages its own
 # formatting.
 evidence/
-
-# Sprint prompts are the historical record for a merged PR; per AGENTS.md
-# they stay in main untouched after merge. Retroactive prettier updates
-# (e.g. a hook version bump that reformats markdown tables) would silently
-# re-touch every historical prompt on the next PR, appearing as
-# out-of-scope changes to a reviewer.
-prompt-*.md

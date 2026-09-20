@@ -5,10 +5,6 @@
 ignore:
   - "CHANGELOG.md"
   - "**/CHANGELOG.md"
-  # Sprint prompts are historical records for merged PRs (see AGENTS.md).
-  # Retroactive rule changes would silently flag every historical prompt
-  # on the next PR as an out-of-scope failure.
-  - "prompt-*.md"
 
 # Repo default line length of 128
 MD013:
