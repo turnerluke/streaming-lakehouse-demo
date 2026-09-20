@@ -3,3 +3,7 @@
 # Evidence pages are markdown with embedded SQL blocks and Svelte-style
 # components that markdownlint's rules don't apply to
 evidence/
+# Sprint prompts are historical records for merged PRs (see AGENTS.md).
+# Retroactive markdownlint rule changes would silently flag every
+# historical prompt on the next PR as an out-of-scope failure.
+prompt-*.md
