@@ -9,3 +9,25 @@ indented_ctes = false
 
 [sqlfluff:templater:jinja]
 apply_dbt_builtins = true
+
+# Sqlfluff runs the jinja templater outside a real dbt runtime, so
+# `adapter.dispatch(...)` is not resolvable. We override the dispatch
+# macros with their BigQuery variants (matches `dialect = bigquery`
+# above) so parsing works. The real dispatch still fires at dbt build
+# time — this override only matters to sqlfluff.
+[sqlfluff:templater:jinja:macros]
+json_get = {% macro json_get(column, path) %}json_value({{ column }}, '{{ path }}'){% endmacro %}
+trunc_hour = {% macro trunc_hour(ts) %}timestamp_trunc({{ ts }}, hour){% endmacro %}
+hours_ago = {% macro hours_ago(n) %}timestamp_sub(current_timestamp(), interval {{ n }} hour){% endmacro %}
+hex_md5 = {% macro hex_md5(x) %}to_hex(md5({{ x }})){% endmacro %}
+
+# Stub for `target.*` references (used in conditional configs).
+#
+# Caveat: `target.type == "bigquery"` here means sqlfluff only lints
+# the BQ branch of any `{% if target.type == 'duckdb' %}` block.
+# DuckDB-only SQL is unchecked by this hook — a real bug in a DuckDB
+# branch will surface at `dbt build --target duckdb` time, not here.
+# Deep coverage would require the `dbt` templater and running sqlfluff
+# once per target; deferred.
+[sqlfluff:templater:jinja:context]
+target = {"type": "bigquery", "name": "dev", "schema": "silver"}

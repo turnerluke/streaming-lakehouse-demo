@@ -47,12 +47,38 @@ storage/month). See `docs/cost.md` before running anything in the cloud.
 **Set a $20 billing alert on the GCP project before your first `terraform apply`.**
 `scripts/set-billing-alert.sh` is a reminder — the console click is faster.
 
-## Quickstart (local)
+## Local demo (zero cloud, ~30 seconds)
+
+The dbt project ships with a 30-row seed dataset and a DuckDB target,
+so you can build the whole warehouse locally without provisioning
+anything:
+
+```bash
+uv sync
+cd dbt
+cp profiles.yml.example profiles.yml
+uv run dbt deps                       # fetch dbt-utils
+uv run dbt seed --target duckdb
+uv run dbt build --target duckdb
+```
+
+That produces `dbt/target/local.duckdb` with populated silver +
+gold tables. Poke at it:
+
+```python
+# in the dbt/ dir:
+import duckdb
+
+conn = duckdb.connect("target/local.duckdb", read_only=True)
+conn.sql("select * from gold.dim_repo_scd2 limit 5").show()
+```
+
+## Quickstart (streaming, local)
 
 ```bash
 cp .env.example .env
 docker compose up -d          # Redpanda + Marquez
-uv sync                       # or: pip install -e .
+uv sync
 python -m producer.github_events_producer   # in one terminal
 python -m consumer.bq_streaming_loader      # in another
 ```
@@ -67,13 +93,15 @@ python -m consumer.bq_streaming_loader      # in another
 
 ## Contributing / conventions
 
-Repo standards (branch/PR rules, commit format, lint stack, sprint prompt
-pattern, `typing.Any` ban) live in [`AGENTS.md`](AGENTS.md). Every
-increment lands as a single focused PR driven by a `prompt-NN-<slug>.md`
-at the repo root.
+Repo standards (branch/PR rules, commit format, lint stack, sprint
+discipline, `typing.Any` ban) live in [`AGENTS.md`](AGENTS.md). Every
+increment lands as a single focused PR driven by a local (gitignored)
+`prompt-<slug>.md` at the repo root.
 
 ## Status
 
-Scaffold. None of this is wired end-to-end yet — see `docs/TODO.md`.
-Sprint 01 (`prompt-01-standards-alignment.md`) aligns the repo standards
-with `cms-open-data`; subsequent sprints will pick up the pipeline work.
+Local dbt build works end-to-end against DuckDB. Streaming path
+(producer -> Kafka -> consumer -> warehouse) is code-complete with
+unit tests; wiring the local integration test and the Dagster asset
+graph are the next sprints. Cloud (real BigQuery + a live Evidence
+dashboard) is deliberately deferred.

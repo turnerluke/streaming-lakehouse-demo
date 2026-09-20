@@ -5,6 +5,8 @@ config-version: 2
 profile: streaming_lakehouse
 
 model-paths: ["models"]
+seed-paths: ["seeds"]
+macro-paths: ["macros"]
 test-paths: ["tests"]
 target-path: "target"
 clean-targets: ["target", "dbt_packages"]
@@ -20,6 +22,19 @@ models:
     gold:
       +materialized: table
       +schema: gold
+
+seeds:
+  streaming_lakehouse:
+    +schema: bronze
+    raw_events:
+      +column_types:
+        event_id: varchar
+        event_type: varchar
+        actor_login: varchar
+        repo_name: varchar
+        event_created_at: timestamp
+        ingested_at: timestamp
+        payload: varchar
 
 vars:
   raw_events_source: "{{ env_var('BQ_DATASET_BRONZE', 'bronze') }}.raw_events"

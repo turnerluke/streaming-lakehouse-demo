@@ -13,6 +13,7 @@ dependencies = [
     "dagster-dbt>=0.24",
     "dagster-webserver>=1.8",
     "dbt-bigquery>=1.8",
+    "dbt-duckdb>=1.9",
     "google-cloud-bigquery>=3.25",
     "google-cloud-bigquery-storage>=2.25",
     "openlineage-python>=1.20",
