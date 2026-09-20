@@ -89,6 +89,38 @@ jobs:
           echo "Discovered: $subprojects"
 
   # ============================================================================================================================
+  # Integration Tests (Docker-backed)
+  # ============================================================================================================================
+  # Marker-scoped suite (`-m integration`) that spins up real containers
+  # via testcontainers. ubuntu-latest runners ship with Docker, so no
+  # extra setup is needed.
+  integration_tests:
+    name: Integration Tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 1
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v3
+        with:
+          enable-cache: true
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Install dependencies
+        run: uv sync --group dev
+
+      - name: Run integration tests
+        run: uv run pytest tests/integration -m integration -v
+
+  # ============================================================================================================================
   # Test Subprojects (matrix)
   # ============================================================================================================================
   test_subprojects:
