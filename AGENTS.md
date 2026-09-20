@@ -51,19 +51,24 @@
 
 ## Sprints (`prompt-*.md`)
 
-- Every incremental piece of work is scoped by a `prompt-NN-<slug>.md`
+- Every incremental piece of work is scoped by a `prompt-<slug>.md`
   file at the repo root. It captures: **Why now**, **Goal**, **Approach**,
   **Files** (add/edit/delete table), **Verification**, **Out of scope**,
   **Gotchas**.
-- One prompt = one PR. When the PR merges, the prompt file stays in
-  `main` as the historical record. Follow-up work gets a new prompt file
-  with the next number.
+- The prompt file is **local-only** — `prompt-*.md` is `.gitignore`d.
+  It's the author's scoping notebook and the adversarial reviewer's
+  brief; it is never committed.
+- The durable historical record of a sprint is its **PR body + commit
+  message**, not the prompt file. Write the PR body assuming nobody
+  will ever see the prompt.
+- One prompt = one PR. Follow-up work gets its own prompt with a fresh
+  slug.
 - New prompts must state their dependency on any open PR and wait for
   that PR to merge before branching (never stack).
 
 ### Sprint loop (every sprint runs this end-to-end)
 
-1. **Write** `prompt-NN-<slug>.md` at repo root.
+1. **Write** `prompt-<slug>.md` locally at repo root (never committed).
 2. **Branch** from `main` (`git checkout main && git pull --ff-only`,
    then `git checkout -b <type>/<slug>`).
 3. **Implement**. One logical change, one commit.
@@ -72,18 +77,21 @@
    enforces this at turn end, but running it explicitly avoids the
    surprise.
 5. **Adversarial review.** Spawn (or self-run as) the
-   `adversarial-reviewer` agent against the commit SHA. Address every
-   MUST-FIX; address SHOULD-FIX unless there's a stated reason to
-   defer; NITs are optional. Amend the commit rather than layering
-   fixups.
+   `adversarial-reviewer` agent against the commit SHA, briefing it
+   with the local `prompt-<slug>.md`. Address every MUST-FIX; address
+   SHOULD-FIX unless there's a stated reason to defer; NITs are
+   optional. Amend the commit rather than layering fixups.
 6. **Push and open the PR** with `gh pr create`. PR body describes
-   what you verified in prose, not as an unchecked checklist.
+   what you verified in prose, not as an unchecked checklist. The
+   PR body IS the historical record — inline anything from the
+   prompt that a future reader would want to know.
 7. **Poll CI to green.** See "After Opening a PR" below. **This step is
    part of the sprint loop, not optional.** A PR that lands with a red
    check is not a merged sprint.
 8. **Wait for merge.** Same `scripts/watch-pr.sh` invocation covers
    this phase.
 9. **Next sprint** starts only after `main` has moved forward.
+   Delete the local `prompt-<slug>.md` (or leave it — it's ignored).
 
 ### Parallel sprints via worktrees (optional)
 
