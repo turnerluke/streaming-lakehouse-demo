@@ -1,7 +1,13 @@
+{% set partition = (
+    {'field': 'event_hour', 'data_type': 'timestamp', 'granularity': 'day'}
+    if target.type == 'bigquery' else none
+) %}
+{% set cluster = ['event_type'] if target.type == 'bigquery' else none %}
+
 {{ config(
     materialized='incremental',
-    partition_by={'field': 'event_hour', 'data_type': 'timestamp', 'granularity': 'day'},
-    cluster_by=['event_type'],
+    partition_by=partition,
+    cluster_by=cluster,
     incremental_strategy='insert_overwrite'
 ) }}
 
@@ -9,14 +15,12 @@ with events as (
     select *
     from {{ ref('stg_github_events') }}
     {% if is_incremental() %}
-        where
-            event_created_at
-            >= timestamp_sub(current_timestamp(), interval 3 hour)
+        where event_created_at >= {{ hours_ago(3) }}
     {% endif %}
 )
 
 select
-    timestamp_trunc(event_created_at, hour) as event_hour,
+    {{ trunc_hour('event_created_at') }} as event_hour,
     event_type,
     count(*) as event_count,
     count(distinct actor_login) as unique_actors,

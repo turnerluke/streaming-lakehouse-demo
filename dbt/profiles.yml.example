@@ -1,6 +1,19 @@
 streaming_lakehouse:
-  target: dev
+  # `duckdb` is the local zero-config target; `dev` is BigQuery.
+  target: duckdb
   outputs:
+    # Local DuckDB — no cloud creds, works from a fresh clone.
+    duckdb:
+      type: duckdb
+      # Relative to the dbt project dir (i.e. `dbt/target/local.duckdb`).
+      path: target/local.duckdb
+      # Default schema when a model has no `+schema:`. Our medallion
+      # schemas (bronze/silver/gold) come from model configs; nothing
+      # actually lands here, but dbt requires a value.
+      schema: main
+      threads: 4
+
+    # BigQuery — requires GOOGLE_APPLICATION_CREDENTIALS + GCP_PROJECT_ID.
     dev:
       type: bigquery
       method: service-account

@@ -140,6 +140,15 @@ pulls — do that in the main worktree first.
 - Prefer `ScheduleWakeup` over tight polling in agent turns so the
   conversation context isn't burned waiting on the runner.
 
+## Adding a new dbt dispatch macro
+
+When adding a new adapter-dispatched macro under `dbt/macros/` (following
+the `json_get` / `trunc_hour` pattern), remember to also add a BigQuery
+variant stub to `dbt/.sqlfluff`'s `[sqlfluff:templater:jinja:macros]`
+section. Sqlfluff runs outside a real dbt runtime and can't resolve
+`adapter.dispatch(...)`; skipping this step surfaces as a cryptic
+"`adapter` is undefined" error at the next pre-commit run.
+
 ## Linting
 
 - Pre-commit is installed. Run `uv run pre-commit run --all-files` to

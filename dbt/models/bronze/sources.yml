@@ -2,7 +2,10 @@ version: 2
 
 sources:
   - name: bronze
-    database: "{{ env_var('GCP_PROJECT_ID') }}"
+    # `local` is DuckDB's derived catalog name from `target/local.duckdb`
+    # in `profiles.yml`. `GCP_PROJECT_ID` overrides it for the BigQuery
+    # `dev` target.
+    database: "{{ env_var('GCP_PROJECT_ID', 'local') }}"
     schema: bronze
     description: "Raw landed GitHub events from the streaming consumer."
     tables:

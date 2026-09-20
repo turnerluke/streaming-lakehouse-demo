@@ -9,26 +9,27 @@
 -- We derive repo attributes from each event's payload snapshot. When any
 -- tracked attribute changes we close the current row (valid_to = new event
 -- time, is_current = false) and open a new one. This is a demo-grade SCD2
--- built entirely with dbt + BigQuery merge semantics.
+-- built entirely with dbt + warehouse merge semantics.
 
 with events as (
     select
         repo_name,
         event_created_at,
-        json_value(payload, '$.repo.id') as repo_id,
-        json_value(payload, '$.payload.repository.language') as repo_language,
-        json_value(payload, '$.payload.repository.description')
+        {{ json_get('payload', '$.repo.id') }} as repo_id,
+        {{ json_get('payload', '$.payload.repository.language') }}
+            as repo_language,
+        {{ json_get('payload', '$.payload.repository.description') }}
             as repo_description,
         cast(
-            json_value(payload, '$.payload.repository.stargazers_count')
-            as int64
+            {{ json_get('payload', '$.payload.repository.stargazers_count') }}
+            as {% if target.type == 'duckdb' %}bigint{% else %}int64{% endif %}
         ) as stargazers_count
     from {{ ref('stg_github_events') }}
     where
         repo_name is not null
         {% if is_incremental() %}
             and event_created_at > (
-                select coalesce(max(t.valid_from), timestamp('1970-01-01'))
+                select coalesce(max(t.valid_from), timestamp '1970-01-01')
                 from {{ this }} as t
             )
         {% endif %}
@@ -68,7 +69,7 @@ filtered as (
 
 versioned as (
     select
-        to_hex(md5(concat(f.repo_name, cast(f.valid_from as string))))
+        {{ hex_md5("concat(f.repo_name, cast(f.valid_from as string))") }}
             as repo_version_key,
         f.repo_name,
         f.repo_id,
