@@ -107,7 +107,7 @@ jobs:
 
       - name: Upload ruff output
         if: steps.ruff.outputs.ruff_status == 'failure'
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: lint-output-ruff
           path: ruff_output.txt
@@ -166,7 +166,7 @@ jobs:
 
       - name: Upload markdownlint output
         if: steps.markdownlint.outputs.markdownlint_status == 'failure'
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: lint-output-markdownlint
           path: markdownlint_output.txt
@@ -223,7 +223,7 @@ jobs:
 
       - name: Upload yamllint output
         if: steps.yamllint.outputs.yamllint_status == 'failure'
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: lint-output-yamllint
           path: yamllint_output.txt
@@ -281,7 +281,7 @@ jobs:
 
       - name: Upload prettier output
         if: steps.prettier.outputs.prettier_status == 'failure'
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: lint-output-prettier
           path: prettier_output.txt
@@ -334,7 +334,7 @@ jobs:
 
       - name: Upload shellcheck output
         if: steps.shellcheck.outputs.shellcheck_status == 'failure'
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: lint-output-shellcheck
           path: shellcheck_output.txt
@@ -383,7 +383,7 @@ jobs:
 
       - name: Upload gitleaks output
         if: steps.gitleaks.outputs.gitleaks_status == 'failure'
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: lint-output-gitleaks
           path: gitleaks_output.txt
@@ -434,7 +434,7 @@ jobs:
 
       - name: Upload commitlint output
         if: steps.commitlint.outputs.commitlint_status == 'failure'
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: lint-output-commitlint
           path: commitlint_output.txt
