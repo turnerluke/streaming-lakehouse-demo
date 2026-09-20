@@ -1,127 +1,149 @@
 # Streaming Lakehouse Demo
 
-A real-time data platform that ingests the public GitHub Events firehose into
-BigQuery via Kafka, models it with dbt (Bronze / Silver / Gold), orchestrates
-with Dagster, and publishes a live Evidence.dev dashboard. Lineage events are
-emitted via OpenLineage.
+[![Test](https://github.com/turnerluke/streaming-lakehouse-demo/actions/workflows/test.yml/badge.svg)](https://github.com/turnerluke/streaming-lakehouse-demo/actions/workflows/test.yml)
+[![Code Quality Check](https://github.com/turnerluke/streaming-lakehouse-demo/actions/workflows/lint.yml/badge.svg)](https://github.com/turnerluke/streaming-lakehouse-demo/actions/workflows/lint.yml)
+[![Pipeline Checks](https://github.com/turnerluke/streaming-lakehouse-demo/actions/workflows/pipeline-checks.yml/badge.svg)](https://github.com/turnerluke/streaming-lakehouse-demo/actions/workflows/pipeline-checks.yml)
+
+A real-time data platform that ingests the public GitHub Events firehose
+through Kafka into a warehouse, models it with dbt into a bronze /
+silver / gold medallion (including an SCD Type 2 dimension), and
+orchestrates the whole thing as a single Dagster asset graph.
+
+Runs end-to-end locally against DuckDB with **zero cloud spend**.
+Cloud (BigQuery + Evidence dashboard) is a swap-in-a-profile away.
 
 ## Architecture
 
-```text
-GitHub Events API
-       |
-       v
-[producer] --> Redpanda (Kafka) --> [consumer] --> BigQuery bronze.raw_events
-                                                          |
-                                                          v
-                                                    dbt (silver, gold)
-                                                          |
-                                                          v
-                                                    Evidence dashboard
-       ^                                                  ^
-       |                                                  |
-       +-------- Dagster (assets + schedules) ------------+
-                          |
-                          v
-                    Marquez (OpenLineage)
+Each solid box is a Dagster asset; arrows are the asset dependencies
+you'll see in the UI. Kafka is infrastructure between two streaming
+assets (not itself an asset). Warehouse is DuckDB locally, BigQuery
+in the cloud path — same models both ways.
+
+```mermaid
+flowchart LR
+    gh([GitHub Events API])
+    kafka[(Kafka / Redpanda)]
+
+    a1["<b>github_events_published</b><br/><i>producer.publish_once</i>"]
+    a2["<b>bronze.raw_events</b><br/><i>consumer.drain_to_duckdb</i>"]
+    a3["<b>silver.stg_github_events</b><br/><i>dbt</i>"]
+    a4["<b>gold.dim_repo_scd2</b><br/><i>dbt SCD2</i>"]
+    a5["<b>gold.fct_events_hourly</b><br/><i>dbt fact</i>"]
+
+    gh --> a1 --> kafka --> a2 --> a3
+    a3 --> a4
+    a3 --> a5
 ```
-
-## Layout
-
-| Path                 | What lives here                                                               |
-| -------------------- | ----------------------------------------------------------------------------- |
-| `producer/`          | Polls GitHub Events API, publishes JSON to a Kafka topic                      |
-| `consumer/`          | Reads the Kafka topic, streams inserts into `bronze.raw_events`               |
-| `dbt/`               | dbt project with bronze sources, silver staging, gold dims/facts (incl. SCD2) |
-| `dagster_project/`   | Dagster assets wrapping producer/consumer/dbt; OpenLineage integration        |
-| `terraform/`         | GCP project bootstrap: BigQuery datasets, service account, IAM                |
-| `evidence/`          | Evidence.dev site for the public dashboard                                    |
-| `.github/workflows/` | CI: dbt compile, `sqlfluff`, dbt tests                                        |
-| `scripts/`           | One-off helpers (setup, billing alert reminder)                               |
-
-## Cost expectation
-
-Designed to sit at **$0/mo** on the BigQuery free tier (1 TB queries + 10 GB
-storage/month). See `docs/cost.md` before running anything in the cloud.
-
-**Set a $20 billing alert on the GCP project before your first `terraform apply`.**
-`scripts/set-billing-alert.sh` is a reminder — the console click is faster.
 
 ## Local demo (zero cloud, ~30 seconds)
 
-The dbt project ships with a 30-row seed dataset and a DuckDB target,
-so you can build the whole warehouse locally without provisioning
-anything:
+Requires: [`uv`](https://docs.astral.sh/uv/) and Python 3.13.
 
 ```bash
 uv sync
 cd dbt
 cp profiles.yml.example profiles.yml
-uv run dbt deps                       # fetch dbt-utils
+uv run dbt deps
 uv run dbt seed --target duckdb
 uv run dbt build --target duckdb
 ```
 
-That produces `dbt/target/local.duckdb` with populated silver +
-gold tables. Poke at it:
+Produces `dbt/target/local.duckdb` with 30 seeded events flowing
+through the medallion. Poke at it:
 
 ```python
-# in the dbt/ dir:
+# from dbt/
 import duckdb
-
 conn = duckdb.connect("target/local.duckdb", read_only=True)
 conn.sql("select * from gold.dim_repo_scd2 limit 5").show()
 ```
 
-## Live pipeline in Dagster (local)
+Expected shape: `octocat/hello-world` shows the seeded Ruby → Python
+migration across 10 SCD2 versions; the hourly fact aggregates 22 rows
+across 4 buckets and 10 event types.
 
-The full streaming + medallion graph runs in one Dagster deployment
-against Colima's Redpanda + DuckDB — no cloud, no BQ. From the repo
-root:
+## Live pipeline in Dagster
+
+Same warehouse, but everything runs as a live Dagster graph pulling
+real GitHub events. Requires Docker (Colima works). From the repo root:
 
 ```bash
-docker compose up -d redpanda        # or `colima start` if not already up
+docker compose up -d redpanda
 uv sync
 cd dbt && cp profiles.yml.example profiles.yml && uv run dbt deps && cd ..
 uv run dagster dev -w dagster_project/workspace.yaml
 ```
 
-Open <http://localhost:3000>. The asset graph shows five nodes
-end-to-end: `github_events_published` -> `bronze.raw_events` ->
-`silver.stg_github_events` -> `{gold.dim_repo_scd2,
-gold.fct_events_hourly}`. Hit "Materialize all" to publish one poll of
-real GitHub events into Kafka, drain them into DuckDB, and rebuild the
-medallion.
+Open <http://localhost:3000>. Materialize the graph:
 
-## Quickstart (streaming, local)
+- `github_events_published` — one poll of GitHub Events → Kafka.
+- `bronze.raw_events` — drain Kafka → DuckDB.
+- `silver.stg_github_events` — dbt typed/deduplicated staging.
+- `gold.dim_repo_scd2` — SCD Type 2 repo attributes.
+- `gold.fct_events_hourly` — event counts per (hour, type).
 
-```bash
-cp .env.example .env
-docker compose up -d          # Redpanda + Marquez
-uv sync
-python -m producer.github_events_producer   # in one terminal
-python -m consumer.bq_streaming_loader      # in another
-```
+The hourly schedule (`dbt_hourly_job`) rebuilds only the dbt layer;
+streaming assets materialize on demand so no cron ever hits GitHub or
+Kafka unattended.
 
-## Quickstart (cloud)
+## What's under the hood
 
-1. `gcloud auth application-default login`
-2. `cd terraform && terraform init && terraform apply`
-3. Export the emitted service-account key path as `GOOGLE_APPLICATION_CREDENTIALS`
-4. `cd dbt && dbt build`
-5. `cd evidence && npm install && npm run sources && npm run dev`
+| Layer          | Tech                                                                                                                                   |
+| -------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
+| Ingestion      | Python + `confluent_kafka` producer polling the GitHub Events API with ETag + `X-Poll-Interval` respect                                |
+| Message bus    | Redpanda (Kafka-compatible) for local, Confluent Cloud-ready for prod                                                                  |
+| Landing        | DuckDB for local dev, BigQuery for cloud (same models via adapter-dispatch macros)                                                     |
+| Transformation | dbt medallion (bronze/silver/gold), ~240 lines of SQL across 3 models + 4 dispatch macros, incremental SCD2 dim, insert-overwrite fact |
+| Orchestration  | Dagster asset graph — one code location covering ingestion + transformation                                                            |
+| Quality        | 42 unit tests, 1 Redpanda-backed integration test, ~19 dbt tests per build, terraform `fmt`+`validate` on CI                           |
+| Dev tooling    | `uv`, `pre-commit`, `ruff` with `select = ["ALL"]` and `typing.Any` banned, `commitlint`, `sqlfluff`, `shellcheck`, `gitleaks`         |
+
+## Layout
+
+| Path                 | Contents                                                                                         |
+| -------------------- | ------------------------------------------------------------------------------------------------ |
+| `producer/`          | GitHub Events poller (long-running loop + Dagster one-shot)                                      |
+| `consumer/`          | Kafka → warehouse writers (BigQuery + DuckDB variants)                                           |
+| `dbt/`               | Medallion models, seed data, dialect-dispatched macros                                           |
+| `dagster_project/`   | Streaming + dbt assets as a single graph                                                         |
+| `terraform/`         | GCP BQ datasets + IAM (unapplied — cloud is deferred)                                            |
+| `evidence/`          | Evidence.dev dashboard skeleton (BQ path, deferred)                                              |
+| `tests/`             | Unit tests + a Docker-backed integration suite (marker-scoped)                                   |
+| `scripts/`           | `watch-pr.sh` PR poller, `worktree-new.sh` / `worktree-drop.sh`, `set-billing-alert.sh` reminder |
+| `.github/workflows/` | Per-linter parallel CI, subproject-matrix tests, terraform gate                                  |
+
+## Design decisions worth calling out
+
+- **Dialect-dispatch dbt macros** (`json_get`, `trunc_hour`, `hours_ago`,
+  `hex_md5`) let the same medallion SQL run on both BigQuery and
+  DuckDB. See `dbt/macros/dialect_dispatch.sql`.
+- **Producer/consumer stay callable both ways.** `poll_and_publish` /
+  `consume_and_load` run as standalone long-loops; `publish_once` /
+  `drain_to_duckdb` run as Dagster asset materializations. On the
+  consumer side, both share the `_to_row` message-to-row helper so
+  the two paths can't drift on schema shape.
+- **`typing.Any` is banned repo-wide.** Ruff `ANN401` +
+  `flake8-tidy-imports` reject it at CI time. See
+  [`docs/policies/no-any.md`](docs/policies/no-any.md).
+- **Sprint prompts are gitignored.** The PR body is the durable
+  historical record; the scoping doc is authored per-PR and disappears
+  on merge. See [`AGENTS.md`](AGENTS.md).
+
+## Status
+
+Local end-to-end **works**: `git clone` → run five commands → a live
+Dagster graph rebuilds a DuckDB medallion from real GitHub Events.
+Every check in every PR is green.
+
+Cloud is **coded but not provisioned**. Terraform for BQ + IAM is
+authored and passes `validate`; the consumer's BQ writer is unit- and
+type-checked; the Evidence dashboard skeleton reads from the BQ
+schema. What's missing is a click on `terraform apply` — deliberate,
+because free tier or not, unattended cloud tends to grow bills.
 
 ## Contributing / conventions
 
 Repo standards (branch/PR rules, commit format, lint stack, sprint
-discipline, `typing.Any` ban) live in [`AGENTS.md`](AGENTS.md). Every
-increment lands as a single focused PR driven by a local (gitignored)
-`prompt-<slug>.md` at the repo root.
-
-## Status
-
-Local dbt build works end-to-end against DuckDB. Streaming path
-(producer -> Kafka -> consumer -> warehouse) is code-complete with
-unit tests; wiring the local integration test and the Dagster asset
-graph are the next sprints. Cloud (real BigQuery + a live Evidence
-dashboard) is deliberately deferred.
+discipline, `typing.Any` ban) live in [`AGENTS.md`](AGENTS.md).
+Review posture in [`REVIEW.md`](REVIEW.md). Every increment lands as a
+single focused PR driven by a local (gitignored) `prompt-<slug>.md`.

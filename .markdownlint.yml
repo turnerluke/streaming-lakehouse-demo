@@ -6,9 +6,12 @@ ignore:
   - "CHANGELOG.md"
   - "**/CHANGELOG.md"
 
-# Repo default line length of 128
+# Repo default line length of 128. Tables get a pass because prettier
+# pads cells to align columns and short tables can't be broken across
+# lines without losing readability.
 MD013:
   line_length: 128
+  tables: false
 
 # Indentation level of unordered list
 MD007:

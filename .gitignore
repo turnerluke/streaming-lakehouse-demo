@@ -36,6 +36,9 @@ dbt/logs/
 dbt/profiles.yml
 dbt/.user.yml
 
+# Dagster local dev creates temp DAGSTER_HOME dirs; ignore them.
+.tmp_dagster_home_*/
+
 # ---------- terraform ----------
 terraform/.terraform/
 terraform/.terraform.lock.hcl
