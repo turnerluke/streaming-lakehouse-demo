@@ -1,0 +1,90 @@
+# ==============================================================================================================================
+# Pipeline checks
+# ==============================================================================================================================
+# Non-lint sanity checks on the pipeline configuration itself:
+#
+#   - terraform-fmt      -> `terraform fmt -check` on every `.tf` file.
+#   - terraform-validate -> `terraform init -backend=false && terraform validate`.
+#
+# Neither job hits a real GCP project; both are free and finish in <30s.
+# Skipped on PRs that don't touch `terraform/**`.
+# ==============================================================================================================================
+---
+name: Pipeline Checks
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  # ============================================================================================================================
+  # terraform fmt
+  # ============================================================================================================================
+  terraform-fmt:
+    name: terraform fmt
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
+      - name: Get changed Terraform files
+        id: changed-files
+        uses: tj-actions/changed-files@v47
+        with:
+          files: "terraform/**"
+
+      - name: Set up Terraform
+        if: steps.changed-files.outputs.any_changed == 'true'
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: "1.9.8"
+          terraform_wrapper: false
+
+      - name: terraform fmt -check
+        if: steps.changed-files.outputs.any_changed == 'true'
+        working-directory: terraform
+        run: terraform fmt -check -recursive
+
+  # ============================================================================================================================
+  # terraform validate
+  # ============================================================================================================================
+  terraform-validate:
+    name: terraform validate
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
+      - name: Get changed Terraform files
+        id: changed-files
+        uses: tj-actions/changed-files@v47
+        with:
+          files: "terraform/**"
+
+      - name: Set up Terraform
+        if: steps.changed-files.outputs.any_changed == 'true'
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: "1.9.8"
+          terraform_wrapper: false
+
+      - name: terraform init (no backend, no cloud creds needed)
+        if: steps.changed-files.outputs.any_changed == 'true'
+        working-directory: terraform
+        run: terraform init -backend=false
+
+      - name: terraform validate
+        if: steps.changed-files.outputs.any_changed == 'true'
+        working-directory: terraform
+        run: terraform validate

@@ -65,12 +65,12 @@ git checkout -b test/pipeline-unit-tests
 
 ## Files
 
-| | Path |
-|---|---|
+|     | Path                                                                         |
+| --- | ---------------------------------------------------------------------------- |
 | ADD | `tests/conftest.py` (autouse fixture that resets producer/consumer runtimes) |
-| ADD | `tests/test_producer_helpers.py` |
-| ADD | `tests/test_consumer_helpers.py` |
-| ADD | `tests/fakes.py` (`FakeKafkaProducer`, minimal fake) |
+| ADD | `tests/test_producer_helpers.py`                                             |
+| ADD | `tests/test_consumer_helpers.py`                                             |
+| ADD | `tests/fakes.py` (`FakeKafkaProducer`, minimal fake)                         |
 
 ## Verification
 

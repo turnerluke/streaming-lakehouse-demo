@@ -29,7 +29,7 @@ class FakeKafkaProducer:
         topic: str,
         key: bytes,
         value: bytes,
-        on_delivery: object = None,  # noqa: ARG002 (matches real signature)
+        on_delivery: object = None,
     ) -> None:
         """Record a message; do not send it anywhere."""
         self.messages.append(ProducedMessage(topic=topic, key=key, value=value))

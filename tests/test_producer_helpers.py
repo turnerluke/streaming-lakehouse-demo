@@ -2,16 +2,12 @@
 
 from __future__ import annotations
 
-import time
 from threading import Thread
+import time
 
 from producer import github_events_producer as producer_mod
-from producer.github_events_producer import (
-    SEEN_CAP,
-    SEEN_TRIM_TO,
-    _publish_events,
-    _sleep_responsively,
-)
+from producer.github_events_producer import SEEN_CAP, SEEN_TRIM_TO, _publish_events, _sleep_responsively
+
 from tests.fakes import FakeKafkaProducer
 
 
@@ -49,7 +45,7 @@ def test_publish_events_trims_seen_when_over_cap() -> None:
     events = [_event(str(i)) for i in range(SEEN_CAP + 5)]
     _publish_events(fake, events)
 
-    assert len(producer_mod._runtime.seen) == SEEN_TRIM_TO  # noqa: SLF001
+    assert len(producer_mod._runtime.seen) == SEEN_TRIM_TO
 
 
 def test_sleep_responsively_bails_on_shutdown() -> None:
@@ -57,7 +53,7 @@ def test_sleep_responsively_bails_on_shutdown() -> None:
 
     def flip_soon() -> None:
         time.sleep(0.1)
-        producer_mod._runtime.shutdown = True  # noqa: SLF001
+        producer_mod._runtime.shutdown = True
 
     Thread(target=flip_soon, daemon=True).start()
 
