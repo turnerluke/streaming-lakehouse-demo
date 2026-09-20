@@ -417,18 +417,47 @@ jobs:
             @commitlint/cli@19.6.1 \
             @commitlint/config-conventional@19.6.0
 
-      - name: Validate commits in PR
-        id: commitlint
+      - name: Get branch commits
+        id: branch-commits
         run: |
-          if npx commitlint \
-              --from origin/${{ github.base_ref }} \
-              --to HEAD \
-              --verbose \
-              > commitlint_output.txt 2>&1; then
+          base_ref="origin/${{ github.base_ref }}"
+          commits=$(git log --format="%H" "$base_ref"..HEAD --no-merges)
+          if [ -z "$commits" ]; then
+            echo "has_commits=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "has_commits=true" >> "$GITHUB_OUTPUT"
+            echo "$commits" > branch_commits.txt
+          fi
+
+      - name: Lint commit messages
+        id: commitlint
+        if: steps.branch-commits.outputs.has_commits == 'true'
+        run: |
+          all_passed=true
+          output_file="commitlint_output.txt"
+          : > "$output_file"
+          # Feed each real commit's message into commitlint by SHA.
+          # `pull_request` events check out an ephemeral merge commit at
+          # HEAD; `--no-merges` above already dropped it, but iterating
+          # per-SHA is what actually keeps commitlint from seeing the
+          # synthetic "Merge <sha> into <sha>" subject.
+          while read -r commit; do
+            echo "Checking commit: $commit" | tee -a "$output_file"
+            commit_msg=$(git log --format=%B -n 1 "$commit")
+            if echo "$commit_msg" | npx commitlint --config .commitlintrc.cjs \
+                >> "$output_file" 2>&1; then
+              echo "PASS" | tee -a "$output_file"
+            else
+              echo "FAIL" | tee -a "$output_file"
+              all_passed=false
+            fi
+            echo "" | tee -a "$output_file"
+          done < branch_commits.txt
+          if [ "$all_passed" = true ]; then
             echo "commitlint_status=success" >> "$GITHUB_OUTPUT"
           else
             echo "commitlint_status=failure" >> "$GITHUB_OUTPUT"
-            cat commitlint_output.txt
+            cat "$output_file"
           fi
         continue-on-error: true
 

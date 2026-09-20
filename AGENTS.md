@@ -61,15 +61,59 @@
 - New prompts must state their dependency on any open PR and wait for
   that PR to merge before branching (never stack).
 
+### Sprint loop (every sprint runs this end-to-end)
+
+1. **Write** `prompt-NN-<slug>.md` at repo root.
+2. **Branch** from `main` (`git checkout main && git pull --ff-only`,
+   then `git checkout -b <type>/<slug>`).
+3. **Implement**. One logical change, one commit.
+4. **Local gates.** `uv run pre-commit run --all-files` and
+   `uv run pytest tests/` both clean before pushing. The Stop hook
+   enforces this at turn end, but running it explicitly avoids the
+   surprise.
+5. **Adversarial review.** Spawn (or self-run as) the
+   `adversarial-reviewer` agent against the commit SHA. Address every
+   MUST-FIX; address SHOULD-FIX unless there's a stated reason to
+   defer; NITs are optional. Amend the commit rather than layering
+   fixups.
+6. **Push and open the PR** with `gh pr create`. PR body describes
+   what you verified in prose, not as an unchecked checklist.
+7. **Poll CI to green.** See "After Opening a PR" below. **This step is
+   part of the sprint loop, not optional.** A PR that lands with a red
+   check is not a merged sprint.
+8. **Wait for merge.** Same `scripts/watch-pr.sh` invocation covers
+   this phase.
+9. **Next sprint** starts only after `main` has moved forward.
+
 ## After Opening a PR
 
-- **Do not stop the turn until CI is green.** After `gh pr create`, poll
-  `gh pr checks <num>` until every check has finished. If any check fails,
-  pull the failure detail (e.g. PR comments via
-  `gh api repos/<owner>/<repo>/issues/<num>/comments`), fix the issue, push,
-  and re-poll. Only report the PR as done when all required checks pass.
-- Prefer `ScheduleWakeup` over tight polling so the conversation context
-  isn't burned waiting on the runner.
+- **CI polling is a required step of the sprint loop, not a nice-to-have.**
+  Every PR must reach `CI_PASS` before its sprint counts as merged.
+  If a check goes red: pull the failure detail, fix the root cause,
+  push, and keep watching until every check is green.
+- After `gh pr create`, watch the PR to green (and, unless `--ci-only`,
+  to merge) with the standard poller:
+
+    ```bash
+    scripts/watch-pr.sh <pr-number>
+    ```
+
+    The script polls `gh pr checks` every 20s and `gh pr view` every 30s.
+    It emits machine-readable markers — `CI_PASS`, `CI_FAIL`,
+    `MERGED <iso-timestamp>`, `CLOSED` — that other agents grep for.
+
+    Exit codes (the actual machine interface):
+
+    - `0` — CI green and (unless `--ci-only`) PR merged.
+    - `1` — PR closed without merging, or (with `--ci-only`) PR closed
+      before CI turned green.
+    - `2` — usage error, non-numeric PR number, or the PR does not exist.
+
+- If any check fails, pull the failure detail (e.g. PR comments via
+  `gh api repos/<owner>/<repo>/issues/<num>/comments`), fix the issue,
+  push. The script picks up the re-run automatically; no restart needed.
+- Prefer `ScheduleWakeup` over tight polling in agent turns so the
+  conversation context isn't burned waiting on the runner.
 
 ## Linting
 
