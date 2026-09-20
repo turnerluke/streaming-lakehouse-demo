@@ -85,6 +85,23 @@
    this phase.
 9. **Next sprint** starts only after `main` has moved forward.
 
+### Parallel sprints via worktrees (optional)
+
+For work that can proceed in parallel with an open PR, use sibling
+worktrees rather than stashing/checkout-swapping in place:
+
+```bash
+scripts/worktree-new.sh <slug>          # -> ../<repo>-<slug>/ on feat/<slug>
+# … work in that worktree, open its PR …
+scripts/worktree-drop.sh <slug>         # after the PR merges
+```
+
+`worktree-new.sh` creates the sibling, branches from the current tip
+of `main`, and runs `uv sync --group dev` so tests can run immediately.
+`worktree-drop.sh` removes the sibling and force-deletes its branch
+(squash-merge means `-d` would refuse). Neither script fetches or
+pulls — do that in the main worktree first.
+
 ## After Opening a PR
 
 - **CI polling is a required step of the sprint loop, not a nice-to-have.**
