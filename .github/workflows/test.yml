@@ -92,7 +92,11 @@ jobs:
   # Test Subprojects (matrix)
   # ============================================================================================================================
   test_subprojects:
-    name: Test ${{ matrix.subproject }}
+    # Static base name; GitHub auto-appends the matrix value in parens
+    # (e.g. "Test subproject (dbt/foo)") when the matrix populates.
+    # Interpolating `${{ matrix.subproject }}` here breaks when the
+    # matrix is empty — the raw expression string appears in the UI.
+    name: Test subproject
     needs: discover_subprojects
     if: needs.discover_subprojects.outputs.any_found == 'true'
     runs-on: ubuntu-latest
