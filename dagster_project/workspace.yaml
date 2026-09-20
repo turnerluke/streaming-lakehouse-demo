@@ -1,2 +1,9 @@
 load_from:
-  - python_module: dagster_project
+  # `python_file` paths in workspace.yaml resolve relative to the yaml
+  # file's location, so this works whether `dagster dev` is invoked
+  # from the repo root or from `dagster_project/`. `working_directory`
+  # is added so sibling imports (`from consumer.drain_to_duckdb ...`)
+  # resolve — Dagster prepends this to sys.path at load time.
+  - python_file:
+      relative_path: definitions.py
+      working_directory: ..
