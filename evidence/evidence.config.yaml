@@ -1,0 +1,14 @@
+# Do not add a `deployment:` block here — the Pages deploy step in
+# .github/workflows/pages.yml appends one (basePath) at build time,
+# and a duplicate top-level key would fail the CI build. Local dev
+# stays root-pathed.
+appearance:
+  default: system
+  switcher: true
+
+plugins:
+  components:
+    "@evidence-dev/core-components": {}
+
+  datasources:
+    "@evidence-dev/duckdb": {}
