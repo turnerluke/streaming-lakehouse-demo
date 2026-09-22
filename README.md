@@ -3,14 +3,19 @@
 [![Test](https://github.com/turnerluke/streaming-lakehouse-demo/actions/workflows/test.yml/badge.svg)](https://github.com/turnerluke/streaming-lakehouse-demo/actions/workflows/test.yml)
 [![Code Quality Check](https://github.com/turnerluke/streaming-lakehouse-demo/actions/workflows/lint.yml/badge.svg)](https://github.com/turnerluke/streaming-lakehouse-demo/actions/workflows/lint.yml)
 [![Pipeline Checks](https://github.com/turnerluke/streaming-lakehouse-demo/actions/workflows/pipeline-checks.yml/badge.svg)](https://github.com/turnerluke/streaming-lakehouse-demo/actions/workflows/pipeline-checks.yml)
+[![Pages](https://github.com/turnerluke/streaming-lakehouse-demo/actions/workflows/pages.yml/badge.svg)](https://turnerluke.github.io/streaming-lakehouse-demo/)
 
 A real-time data platform that ingests the public GitHub Events firehose
 through Kafka into a warehouse, models it with dbt into a bronze /
 silver / gold medallion (including an SCD Type 2 dimension), and
 orchestrates the whole thing as a single Dagster asset graph.
 
+**Live dashboard**: <https://turnerluke.github.io/streaming-lakehouse-demo/>
+— an Evidence.dev site rebuilt from the seeded DuckDB warehouse on every
+push to `main`, hosted for free on GitHub Pages.
+
 Runs end-to-end locally against DuckDB with **zero cloud spend**.
-Cloud (BigQuery + Evidence dashboard) is a swap-in-a-profile away.
+Cloud (BigQuery) is a swap-in-a-profile away.
 
 ## Architecture
 
@@ -107,7 +112,7 @@ Kafka unattended.
 | `dbt/`               | Medallion models, seed data, dialect-dispatched macros                                           |
 | `dagster_project/`   | Streaming + dbt assets as a single graph                                                         |
 | `terraform/`         | GCP BQ datasets + IAM (unapplied — cloud is deferred)                                            |
-| `evidence/`          | Evidence.dev dashboard skeleton (BQ path, deferred)                                              |
+| `evidence/`          | Evidence.dev dashboard — rebuilt from the seeded DuckDB and deployed to GitHub Pages on push     |
 | `tests/`             | Unit tests + a Docker-backed integration suite (marker-scoped)                                   |
 | `scripts/`           | `watch-pr.sh` PR poller, `worktree-new.sh` / `worktree-drop.sh`, `set-billing-alert.sh` reminder |
 | `.github/workflows/` | Per-linter parallel CI, subproject-matrix tests, terraform gate                                  |
@@ -133,7 +138,10 @@ Kafka unattended.
 
 Local end-to-end **works**: `git clone` → run five commands → a live
 Dagster graph rebuilds a DuckDB medallion from real GitHub Events.
-Every check in every PR is green.
+Every check in every PR is green. The seeded medallion is also
+published as a public
+[Evidence dashboard](https://turnerluke.github.io/streaming-lakehouse-demo/)
+via a `pages.yml` workflow that rebuilds on every push to `main`.
 
 Cloud is **coded but not provisioned**. Terraform for BQ + IAM is
 authored and passes `validate`; the consumer's BQ writer is unit- and

@@ -1,0 +1,136 @@
+# ==============================================================================================================================
+# GitHub Pages — build and deploy the Evidence dashboard
+# ==============================================================================================================================
+# Two jobs:
+#
+#   1. build_dashboard: rebuild the DuckDB warehouse from the dbt seed
+#      and render the Evidence static site into `evidence/build/`.
+#      Runs on both `pull_request` (build-only smoke test, no deploy)
+#      and `push: [main]` / `workflow_dispatch` (build + upload
+#      artifact for the deploy job).
+#   2. deploy: publish the built site to GitHub Pages via
+#      `actions/deploy-pages`. Gated to non-PR events so PR builds
+#      validate the workflow without touching the live site.
+#
+# The whole workflow runs against the committed seed data — no cloud
+# services touched. Requires GitHub Pages to be set to "GitHub Actions"
+# mode in repo Settings → Pages (one-time operator step; the deploy
+# job fails loudly with a clear message if it isn't).
+# ==============================================================================================================================
+---
+name: Pages
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+# Only one deploy at a time. `cancel-in-progress: false` — cancelling
+# mid-deploy can leave GH Pages in a half-published state.
+# Distinct group per ref so a PR build never blocks a main deploy.
+concurrency:
+  group: pages-${{ github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  # ============================================================================================================================
+  # Build the DuckDB warehouse + Evidence static site
+  # ============================================================================================================================
+  build_dashboard:
+    name: Build dashboard
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 1
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v7
+        with:
+          enable-cache: true
+
+      - name: Set up Python
+        uses: actions/setup-python@v7
+        with:
+          python-version: "3.13"
+
+      - name: Install Python dependencies
+        run: uv sync
+
+      - name: Build DuckDB warehouse from dbt seed
+        working-directory: dbt
+        env:
+          # The default target in profiles.yml.example is `duckdb`; we
+          # cp it in place so `uv run dbt ...` doesn't need `--target`.
+          # Sensitive BQ vars stay unset — the DuckDB target ignores them.
+          DBT_PROFILES_DIR: "."
+        run: |
+          cp profiles.yml.example profiles.yml
+          uv run dbt deps
+          uv run dbt seed --target duckdb
+          uv run dbt build --target duckdb
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: evidence/package-lock.json
+
+      - name: Install Evidence dependencies
+        working-directory: evidence
+        run: npm ci
+
+      - name: Set Evidence base path for GH Pages subpath
+        # GH Pages serves this repo at /streaming-lakehouse-demo/. Evidence
+        # needs to know that at build time so its internal links resolve.
+        # The checked-in evidence.config.yaml intentionally omits this so
+        # local dev stays root-pathed.
+        working-directory: evidence
+        run: |
+          printf 'deployment:\n  basePath: /streaming-lakehouse-demo\n' >> evidence.config.yaml
+
+      - name: Build Evidence sources
+        working-directory: evidence
+        run: npm run sources
+
+      - name: Build Evidence site
+        working-directory: evidence
+        run: npm run build
+
+      - name: Upload Pages artifact
+        # Only needed on the deploy path — PR runs still exercise the
+        # build steps above and fail fast on any regression.
+        if: github.event_name != 'pull_request'
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: evidence/build
+
+  # ============================================================================================================================
+  # Deploy to GitHub Pages
+  # ============================================================================================================================
+  deploy:
+    name: Deploy to GitHub Pages
+    needs: build_dashboard
+    # PR runs stop after `build_dashboard`; only push/dispatch deploy.
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Configure GitHub Pages
+        uses: actions/configure-pages@v5
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

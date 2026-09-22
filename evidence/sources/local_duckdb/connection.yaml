@@ -1,0 +1,6 @@
+name: local_duckdb
+type: duckdb
+options:
+  # Points at the DuckDB file produced by `dbt build --target duckdb`
+  # from the repo root. Path is relative to this connection.yaml.
+  filename: ../../../dbt/target/local.duckdb
