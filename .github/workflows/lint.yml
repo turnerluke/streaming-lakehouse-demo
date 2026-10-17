@@ -398,6 +398,7 @@ jobs:
   commitlint:
     name: Commitlint
     runs-on: ubuntu-latest
+    if: github.actor != 'dependabot[bot]'
     permissions:
       contents: read
     steps:
