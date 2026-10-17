@@ -108,7 +108,7 @@ jobs:
         # Only needed on the deploy path — PR runs still exercise the
         # build steps above and fail fast on any regression.
         if: github.event_name != 'pull_request'
-        uses: actions/upload-pages-artifact@v3
+        uses: actions/upload-pages-artifact@v5
         with:
           path: evidence/build
 
