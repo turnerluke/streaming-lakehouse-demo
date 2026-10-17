@@ -10,6 +10,6 @@
   "type": "commonjs",
   "devDependencies": {
     "prettier": "^3.4.2",
-    "prettier-plugin-toml": "^2.0.1"
+    "prettier-plugin-toml": "^3.0.2"
   }
 }
